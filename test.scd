@@ -9,6 +9,7 @@ s.options.numAudioBusChannels = 256;
 s.boot;
 )
 
+s.volume.mute; // importante
 b = Barrel.new(s);
 //b.origin = -pi/4;
 b.build(levels: 2);

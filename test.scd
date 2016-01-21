@@ -1,18 +1,25 @@
 // test
 
 Server.scsynth;
-Server.supernova;
 
 (
-s.options.numControlBusChannels = 8192;
-s.options.numAudioBusChannels = 512;
+Server.supernova;
+s.options.maxSynthDefs;
+s.options.maxNodes;
+s.options.numControlBusChannels;
+s.options.numAudioBusChannels = 1024;
 s.options.memSize = 1024 * 500;
 s.reboot;
 )
 
 b = Barrel.new(s);
+b.sourceIn = Bus.audio(s, 1);
 //b.origin = -pi/4;
 b.build(quadrants: 4, levels: 4);
+// levels = 4 con scsynth no funciona en mi máquina,
+// con supernova si.
+// Si no hay capacidad de cómputo bajar los niveles
+// o la cantidad de cuadrantes en su defecto.
 
 // placas: hoop, quadrant, level, num
 b.plate(0, 0, 0, 0).theta;
@@ -34,21 +41,40 @@ b.plate(0, 0, 1, 0).group;
 
 (
 SynthDef(\test, { arg out = 0;
-	//var sig = PinkNoise.ar(-6.dbamp) * Decay.ar(Impulse.ar(0.25), 0.25);
-	var sig = Saw.ar(mul: -6.dbamp) * Decay.ar(Impulse.ar(0.25), 0.25);
+	var sig = PinkNoise.ar(-6.dbamp) * Decay.ar(Impulse.ar(0.25), 0.25);
+	//var sig = Saw.ar(mul: -6.dbamp) * Decay.ar(Impulse.ar(0.25), 0.25);
+	//var sig = SinOsc.ar(mul: -6.dbamp) * Decay.ar(Impulse.ar(0.25), 0.25);
+	//var sig = SinOsc.ar(mul: -12.dbamp);
 	sig = FoaEncode.ar(sig, FoaEncoderMatrix.newOmni);
 	Out.ar(out, sig)
 }).add;
 )
 
-w = Synth(\test, [out: b.plate(0, 0, 0, 0).in]);
-x = Synth(\test, [out: b.plate(0, 1, 0, 0).in]);
-y = Synth(\test, [out: b.plate(0, 2, 0, 0).in]);
-z = Synth(\test, [out: b.plate(0, 3, 0, 0).in]);
-[w, x, y, z].do(_.free);
+w = Synth(\test, [out: b.sourceIn]);
+[w].do(_.free);
 
-b.plate(0, 3, 3, 3).in
+(
+// Ejecutar varias veces, valores aleatorios
+var quadrant = b.quadrants.rand;
+var level = b.levels.rand;
 
+// cambia al procesamiento (luego que sea solo una función)
+b.plate(0, quadrant, 0, 0).processDef = SynthDef(\custom, { arg in, out;
+	var sig = In.ar(in, 4);
+	sig = Resonz.ar(sig, rrand(500, 2000), 0.01, mul: 100);
+	Out.ar(out, sig);
+});
+
+// cambia la decisión
+b.plate(0, quadrant, level, 0).decisionDef = SynthDef(\indeciso, { arg in, kout;
+	var sig = In.ar(in); // hacer algo con esto...
+	var control;
+	control = LFNoise1.kr(1).range(0, 1);
+	Out.kr(kout, control);
+});
+)
+
+// recorridos
 (
 var hoops = 1, quadrants = 4, levels = 3;
 hoops.do { arg h;

@@ -3,11 +3,12 @@
 Plate {
 	var server;
 	var <group, <internalBuses;
-	var positionDef, <>processDef, <>decisionDef, routeDef, routeLeafDef;
+	var positionDef, <processDef, <decisionDef, routeDef, routeLeafDef;
 	var positionSynth, <processSynth, <decisionSynth, routeSynth;
 
 	var <>in, <>out, <>rOut;
 	var <>del; // distancia
+	classvar <>maxDel = 0.5; // memoria
 	var <>angle, <>theta, <>phi;
 
 	*new { arg server;
@@ -24,7 +25,7 @@ Plate {
 		positionDef = SynthDef(\position, { arg in, out, del, angle, theta, phi;
 			var sig;
 			sig = In.ar(in, 4);
-			sig = DelayC.ar(sig, del, del);
+			sig = DelayC.ar(sig, Plate.maxDel, del);
 			sig = FoaPush.ar(sig, angle, theta, phi);
 			Out.ar(out, sig);
 		});
@@ -118,16 +119,62 @@ Plate {
 			});
 		});
 	}
+
+	processDef_ { arg def;
+		var args = def.func.argNames.as(Array);
+
+		if(args.includes(\in) && args.includes(\out), {
+			server.bind {
+				processDef = def;
+				processDef.send(server);
+				server.sync;
+				if(this.processSynth.notNil, { // notNil == running
+					processSynth = Synth(processDef.name, [
+						in: internalBuses.positionOut,
+						out: internalBuses.processOut,
+					], processSynth, 'addReplace');
+				});
+				// set args
+			};
+		}, {
+			"processDef necesita de in y out".error;
+			^this;
+		});
+	}
+
+	decisionDef_ { arg def;
+		var args = def.func.argNames.as(Array);
+
+		if(args.includes(\in) && args.includes(\kout), {
+			server.bind {
+				decisionDef = def;
+				decisionDef.send(server);
+				server.sync;
+				if(this.decisionSynth.notNil, { // notNil == running
+					decisionSynth = Synth(decisionDef.name, [
+						in: internalBuses.processOut,
+						kout: internalBuses.decisionOut,
+					], decisionSynth, 'addReplace');
+					// set args
+				});
+			};
+		}, {
+			"decisionDef necesita de in y kout".error;
+			^this;
+		});
+	}
 }
 
 Barrel {
 	var server;
 	var group, internalBuses;
-	var fxDef, decoderDef;
-	var fxSynth, decoderSynth;
+	var sourceDef, fxDef, decoderDef;
+	var sourceSynth, fxSynth, decoderSynth;
+
+	var <sourceIn;
 
 	var <>out = 0;
-	var <plates;
+	var <data;
 	var <>origin = 0;
 	var <>hoops = 1; // elevación
 	var <>quadrants = 4; // acimut
@@ -142,6 +189,11 @@ Barrel {
 	}
 
 	prMakeDefaultDefs {
+		// ruteo de la fuente
+		sourceDef = SynthDef(\monoSource, { arg in, out;
+			Out.ar(out, In.ar(in, 1));
+		});
+
 		// efecto global programable
 		fxDef = SynthDef(\barrelFX, { arg in, out;
 			var sig;
@@ -160,8 +212,7 @@ Barrel {
 	}
 
 	prAddDefs {
-		fxDef.send(server);
-		decoderDef.send(server);
+		[sourceDef, fxDef, decoderDef].do({ arg i; i.send(server) });
 	}
 
 	prCalcPos { arg hoop, quadrant, level, plateNum;
@@ -178,7 +229,7 @@ Barrel {
 		// estructura de barril vertical
 		// en realidad es un anfiteatro con pasillos
 
-		plates = hoops.collect { arg hoop;
+		data = hoops.collect { arg hoop;
 			var auxHoop;
 			var hoopGroup = ParGroup.new(target, 'addToTail');
 
@@ -202,15 +253,15 @@ Barrel {
 
 						plate = Plate.new(server);
 						plate
-						.del_(0.2) // calcular
-						.angle_(pi/2) // calcular
+						.del_(Plate.maxDel.rand) // TODO: calcular
+						.angle_(pi/4) // TODO: calcular
 						.theta_(theta)
 						.phi_(phi);
 
 						// considera al bus como entrada (permite sumar)
 						plate.in = Bus.audio(server, 4);
 
-						prevLevel.postln;
+						//prevLevel.postln;
 
 						if(prevLevel.notNil, {
 							case(
@@ -262,10 +313,19 @@ Barrel {
 
 			this.prMakeBarrel(group, levels);
 
+			sourceSynth = this.hoops.collect({ arg hoop;
+				quadrants.collect({ arg quadrant;
+					Synth(sourceDef.name, [
+						in: sourceIn,
+						out: this.plate(hoop, quadrant, 0, 0).in
+					], group, 'addToHead');
+				});
+			});
+
 			fxSynth = Synth(fxDef.name, [
 				in: internalBuses.fxIn,
 				out: internalBuses.fxOut,
-			], group, 'addAfter'); //'addToTail'); supernova?
+			], group, 'addToTail'); //'addToTail'); supernova?
 
 			decoderSynth = Synth(decoderDef.name, [
 				in: internalBuses.fxOut,
@@ -276,19 +336,27 @@ Barrel {
 		});
 	}
 
+	sourceIn_ { arg bus;
+		sourceIn = bus;
+		if(sourceSynth.notNil, {
+			sourceSynth.flat.do({ arg i; i.set(\in, sourceIn) });
+		});
+	}
+
+	// level, quadrant y hoop podrían ser clases, pero por ahora no
 	plate { arg hoop = 0, quadrant = 0, level = 0, num = 0;
-		^plates[hoop][1][quadrant][1][level][1][num];
+		^data[hoop][1][quadrant][1][level][1][num];
 	}
 
 	level { arg hoop, quadrant, num;
-		^plates[hoop][1][quadrant][1][num][0];
+		^data[hoop][1][quadrant][1][num][0];
 	}
 
 	quadrant { arg hoop, num;
-		^plates[hoop][1][num][0];
+		^data[hoop][1][num][0];
 	}
 
 	hoop { arg num;
-		^plates[num][0];
+		^data[num][0];
 	}
 }

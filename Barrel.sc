@@ -2,7 +2,7 @@
 
 Plate {
 	var server;
-	var <group, internalBuses;
+	var <group, <internalBuses;
 	var positionDef, <>processDef, <>decisionDef, routeDef, routeLeafDef;
 	var positionSynth, <processSynth, <decisionSynth, routeSynth;
 
@@ -40,22 +40,22 @@ Plate {
 		decisionDef = SynthDef(\decision, { arg in, kout;
 			var sig, route;
 			sig = In.ar(in, 4);
-			route = 0.5;
+			route = DC.kr(0.5);
 			Out.kr(kout, route);
 		});
 
 		// ruteo a las sub placas, synth invariable, regla fija.
-		routeDef = SynthDef(\route, { arg a_in, k_route, out, rOut1, rOut2;
-			//var sig;
-			//sig = In.ar(in, 4);
-			Out.ar(out, a_in); //sig);
-			Out.ar(rOut1, a_in * k_route);
-			Out.ar(rOut2, a_in * (1 - k_route));
+		routeDef = SynthDef(\route, { arg in, kroute, out, rOut1, rOut2;
+			in = In.ar(in, 4);
+			kroute = In.kr(kroute);
+			Out.ar(out, in);
+			Out.ar(rOut1, in * kroute);
+			Out.ar(rOut2, in * (1 - kroute));
 		});
 
 		// rOut [nil, nil]
-		routeLeafDef = SynthDef(\routeNilNil, { arg a_in, out;
-			Out.ar(out, a_in);
+		routeLeafDef = SynthDef(\routeNilNil, { arg in, out;
+			Out.ar(out, In.ar(in, 4));
 		});
 	}
 
@@ -66,7 +66,7 @@ Plate {
 		});
 	}
 
-	build { arg target, addAction = 'addToHead';
+	build { arg target, addAction;
 		server.doWhenBooted({
 			this.prMakeDefaultDefs(); // fix: rehace innecesariamente
 			this.prAddDefs(); // fix: reenvía las synth invariables
@@ -104,13 +104,13 @@ Plate {
 
 			if(rOut[0].isNil && rOut[1].isNil, {
 				routeSynth = Synth(routeLeafDef.name, [
-					a_in: internalBuses.processOut,
+					in: internalBuses.processOut,
 					out: out
 				], decisionSynth, 'addAfter');
 			}, {
 				routeSynth = Synth(routeDef.name, [
-					a_in: internalBuses.processOut,
-					k_route: internalBuses.decisionOut,
+					in: internalBuses.processOut,
+					kroute: internalBuses.decisionOut,
 					out: out,
 					rOut1: rOut[0],
 					rOut2: rOut[1],
@@ -180,30 +180,30 @@ Barrel {
 
 		plates = hoops.collect { arg hoop;
 			var auxHoop;
-			var hoopGroup = Group.new(target);
+			var hoopGroup = ParGroup.new(target, 'addToTail');
 
 			auxHoop = quadrants.collect { arg quadrant;
 				var auxQuadrant;
-				var quadrantGroup = Group.new(hoopGroup);
+				var quadrantGroup = Group.new(hoopGroup, 'addToTail');
 				var lastGroup = quadrantGroup;
 				var prevLevel;
 
 				auxQuadrant = levels.collect { arg level;
 					var auxLevel;
-					var levelGroup = Group.new(lastGroup);
-					lastGroup = levelGroup;
+					var levelGroup = ParGroup.new(lastGroup, 'addToTail');
+					lastGroup = quadrantGroup; //levelGroup;
 
 					auxLevel = prevLevel = (level+1).collect { arg plateNum;
 						var plate, theta, phi;
 
 						#theta, phi = this.prCalcPos(
 							hoop, quadrant, level, plateNum);
-						"quadrant = %\nlevel = %\nplate = %\ntheta = %\nphi = %\n".postf(quadrant, level, plateNum, theta, phi);
+						//"quadrant = %\nlevel = %\nplate = %\ntheta = %\nphi = %\n".postf(quadrant, level, plateNum, theta, phi);
 
 						plate = Plate.new(server);
 						plate
-						.del_(nil) // calcular
-						.angle_(nil) // calcular
+						.del_(0.2) // calcular
+						.angle_(pi/2) // calcular
 						.theta_(theta)
 						.phi_(phi);
 
@@ -231,7 +231,7 @@ Barrel {
 						});
 
 						plate.out = internalBuses.fxIn;
-						plate.build(levelGroup, 'addToHead');
+						plate.build(levelGroup, 'addToTail');
 					};
 					[levelGroup, auxLevel]
 				};
@@ -252,7 +252,7 @@ Barrel {
 			server.sync;
 
 			target = target ? server;
-			group = ParGroup.new(target, addAction);
+			group = Group.new(target, addAction);
 
 			internalBuses.do(_.free);
 			internalBuses = ();

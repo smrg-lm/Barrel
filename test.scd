@@ -74,6 +74,7 @@ b.plate(0, quadrant, level, 0).decisionDef = SynthDef(\indeciso, { arg in, kout;
 )
 
 w.free;
+b.free;
 
 // recorridos
 (

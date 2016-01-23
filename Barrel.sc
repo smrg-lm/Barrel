@@ -164,6 +164,11 @@ Plate {
 			^this;
 		});
 	}
+
+	free {
+		in.free;
+		internalBuses.do(_.free);
+	}
 }
 
 Barrel {
@@ -360,5 +365,28 @@ Barrel {
 
 	hoop { arg num;
 		^data[num][0];
+	}
+
+	platesDo { arg func;
+		hoops.do { arg h;
+			quadrants.do { arg q;
+				levels.do { arg l;
+					(l+1).do { arg p;
+						func.value(
+							this.plate(h, q, l, p),
+							h, q, l, p
+						);
+					}
+				}
+			}
+		};
+	}
+
+	free {
+		group.free;
+		sourceIn.free;
+		internalBuses.do(_.free);
+		this.platesDo(_.free);
+		data = internalBuses = sourceSynth = fxSynth = decoderSynth = nil;
 	}
 }

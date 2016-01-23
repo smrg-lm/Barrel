@@ -83,36 +83,3 @@ b.platesDo({ arg plate, h, q, l, p;
 
 w.free;
 b.free;
-
-// recorridos
-(
-var hoops = 1, quadrants = 4, levels = 3;
-hoops.do { arg h;
-	quadrants.do { arg q;
-		levels.do { arg l;
-			(l+1).do { arg p;
-				[h, q, l, p].postln;
-				b.plate(h, q, l, p).in.postln;
-				b.plate(h, q, l, p).rOut.postln;
-			}
-		};
-		"".postln;
-	}
-};
-)
-
-(
-var hoops = 1, quadrants = 4, levels = 3;
-hoops.do { arg h;
-	quadrants.do { arg q;
-		levels.do { arg l;
-			(l+1).do { arg p;
-				[h, q, l, p].postln;
-				b.plate(h, q, l, p).internalBuses.positionOut.postln;
-				b.plate(h, q, l, p).internalBuses.processOut.postln;
-			}
-		};
-		"".postln;
-	}
-};
-)

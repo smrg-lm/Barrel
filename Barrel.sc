@@ -69,55 +69,53 @@ Plate {
 	}
 
 	build { arg target, addAction;
-		server.doWhenBooted({
-			this.prMakeDefaultDefs(); // fix: rehace innecesariamente
-			this.prAddDefs(); // fix: reenvía las synth invariables
-			server.sync;
+		this.prMakeDefaultDefs(); // fix: rehace innecesariamente
+		this.prAddDefs(); // fix: reenvía las synth invariables
+		server.sync;
 
-			group = Group.new(target, addAction);
+		group = Group.new(target, addAction);
 
-			// in, out y rOut se definen externamente
+		// in, out y rOut se definen externamente
 
-			internalBuses.do(_.free);
-			internalBuses = ();
-			// se consideran los buses como salidas
-			internalBuses.positionOut = Bus.audio(server, 4);
-			internalBuses.processOut = Bus.audio(server, 4);
-			internalBuses.decisionOut = Bus.control(server, 1); // fix: nil nil dummy
+		internalBuses.do(_.free);
+		internalBuses = ();
+		// se consideran los buses como salidas
+		internalBuses.positionOut = Bus.audio(server, 4);
+		internalBuses.processOut = Bus.audio(server, 4);
+		internalBuses.decisionOut = Bus.control(server, 1); // fix: nil nil dummy
 
-			positionSynth = Synth(positionDef.name, [
-				in: in,
-				out: internalBuses.positionOut,
-				del: del,
-				angle: angle,
-				theta: theta,
-				phi: phi
-			], group, 'addToHead');
+		positionSynth = Synth(positionDef.name, [
+			in: in,
+			out: internalBuses.positionOut,
+			del: del,
+			angle: angle,
+			theta: theta,
+			phi: phi
+		], group, 'addToHead');
 
-			processSynth = Synth(processDef.name, [
-				in: internalBuses.positionOut,
-				out: internalBuses.processOut,
-			], positionSynth, 'addAfter');
+		processSynth = Synth(processDef.name, [
+			in: internalBuses.positionOut,
+			out: internalBuses.processOut,
+		], positionSynth, 'addAfter');
 
-			decisionSynth = Synth(decisionDef.name, [
+		decisionSynth = Synth(decisionDef.name, [
+			in: internalBuses.processOut,
+			kout: internalBuses.decisionOut,
+		], processSynth, 'addAfter');
+
+		if(rOut[0].isNil && rOut[1].isNil, {
+			routeSynth = Synth(routeLeafDef.name, [
 				in: internalBuses.processOut,
-				kout: internalBuses.decisionOut,
-			], processSynth, 'addAfter');
-
-			if(rOut[0].isNil && rOut[1].isNil, {
-				routeSynth = Synth(routeLeafDef.name, [
-					in: internalBuses.processOut,
-					out: out
-				], decisionSynth, 'addAfter');
-			}, {
-				routeSynth = Synth(routeDef.name, [
-					in: internalBuses.processOut,
-					kroute: internalBuses.decisionOut,
-					out: out,
-					rOut1: rOut[0],
-					rOut2: rOut[1],
-				], decisionSynth, 'addAfter');
-			});
+				out: out
+			], decisionSynth, 'addAfter');
+		}, {
+			routeSynth = Synth(routeDef.name, [
+				in: internalBuses.processOut,
+				kroute: internalBuses.decisionOut,
+				out: out,
+				rOut1: rOut[0],
+				rOut2: rOut[1],
+			], decisionSynth, 'addAfter');
 		});
 	}
 
@@ -261,7 +259,7 @@ Barrel {
 
 						#theta, phi = this.prCalcPos(
 							hoop, quadrant, level, plateNum);
-						//"quadrant = %\nlevel = %\nplate = %\ntheta = %\nphi = %\n".postf(quadrant, level, plateNum, theta, phi);
+						//[hoop, quadrant, level, plateNum, theta, phi].postln;
 
 						plate = Plate.new(server);
 						plate
@@ -295,6 +293,8 @@ Barrel {
 
 						plate.out = internalBuses.fxIn;
 						plate.build(levelGroup, 'addToTail');
+						server.sync;
+						plate;
 					};
 					[levelGroup, auxLevel]
 				};

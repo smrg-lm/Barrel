@@ -4,8 +4,7 @@ Server.scsynth;
 
 (
 Server.supernova;
-s.options.maxSynthDefs;
-s.options.maxNodes;
+s.options.maxNodes = 1024;
 s.options.numControlBusChannels;
 s.options.numAudioBusChannels = 1024;
 s.options.memSize = 1024 * 500;
@@ -15,7 +14,7 @@ s.reboot;
 b = Barrel.new(s);
 b.sourceIn = Bus.audio(s, 1);
 //b.origin = -pi/4;
-b.build(quadrants: 4, levels: 4);
+b.build(hoops: 2, quadrants: 4, levels: 4);
 // levels = 4 con scsynth no funciona en mi máquina,
 // con supernova si.
 // Si no hay capacidad de cómputo bajar los niveles

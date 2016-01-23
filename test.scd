@@ -51,7 +51,6 @@ SynthDef(\test, { arg out = 0;
 )
 
 w = Synth(\test, [out: b.sourceIn]);
-[w].do(_.free);
 
 (
 // Ejecutar varias veces, valores aleatorios
@@ -73,6 +72,8 @@ b.plate(0, quadrant, level, 0).decisionDef = SynthDef(\indeciso, { arg in, kout;
 	Out.kr(kout, control);
 });
 )
+
+w.free;
 
 // recorridos
 (

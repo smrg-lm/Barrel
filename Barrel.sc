@@ -27,6 +27,7 @@ Plate {
 			sig = In.ar(in, 4);
 			sig = DelayC.ar(sig, Plate.maxDel, del);
 			sig = FoaPush.ar(sig, angle, theta, phi);
+			sig = FoaDecode.ar(sig, FoaDecoderMatrix.newBtoA);
 			Out.ar(out, sig);
 		});
 
@@ -206,6 +207,7 @@ Barrel {
 		decoderDef = SynthDef(\decoder, { arg in, out = 0;
 			var sig;
 			sig = In.ar(in, 4);
+			sig = FoaEncode.ar(sig, FoaEncoderMatrix.newAtoB);
 			sig = FoaDecode.ar(sig, FoaDecoderMatrix.newStereo);
 			Out.ar(out, sig);
 		});

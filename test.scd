@@ -73,6 +73,14 @@ b.plate(0, quadrant, level, 0).decisionDef = SynthDef(\indeciso, { arg in, kout;
 });
 )
 
+(
+// genera ruido si hay señal pero puede servir para ajustar
+b.platesDo({ arg plate, h, q, l, p;
+	plate.del = Plate.maxDel.asFloat.rand;
+	[plate, h, q, l, p].postln;
+});
+)
+
 w.free;
 b.free;
 

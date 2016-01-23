@@ -7,7 +7,7 @@ Plate {
 	var positionSynth, <processSynth, <decisionSynth, routeSynth;
 
 	var <>in, <>out, <>rOut;
-	var <>del; // distancia
+	var <del; // distancia
 	classvar <>maxDel = 0.5; // memoria
 	var <>angle, <>theta, <>phi;
 
@@ -163,6 +163,11 @@ Plate {
 			"decisionDef necesita de in y kout".error;
 			^this;
 		});
+	}
+
+	del_ { arg d;
+		del = d;
+		if(positionSynth.notNil, { positionSynth.set(\del, del) });
 	}
 
 	free {
@@ -383,10 +388,11 @@ Barrel {
 	}
 
 	free {
-		group.free;
+		group !? _.free;
 		sourceIn.free;
 		internalBuses.do(_.free);
-		this.platesDo(_.free);
-		data = internalBuses = sourceSynth = fxSynth = decoderSynth = nil;
+		data !? { this.platesDo(_.free) };
+		group = data = internalBuses = sourceIn =
+		sourceSynth = fxSynth = decoderSynth = nil;
 	}
 }

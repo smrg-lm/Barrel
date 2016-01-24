@@ -246,13 +246,11 @@ Barrel {
 			auxHoop = quadrants.collect { arg quadrant;
 				var auxQuadrant;
 				var quadrantGroup = Group.new(hoopGroup, 'addToTail');
-				var lastGroup = quadrantGroup;
 				var prevLevel;
 
 				auxQuadrant = levels.collect { arg level;
 					var auxLevel;
-					var levelGroup = ParGroup.new(lastGroup, 'addToTail');
-					lastGroup = quadrantGroup; //levelGroup;
+					var levelGroup = ParGroup.new(quadrantGroup, 'addToTail');
 
 					auxLevel = prevLevel = (level+1).collect { arg plateNum;
 						var plate, theta, phi;
@@ -273,6 +271,7 @@ Barrel {
 
 						//prevLevel.postln;
 
+						// plate.build depende de rOut
 						if(prevLevel.notNil, {
 							case(
 								{ plateNum == 0 }, {
@@ -291,9 +290,6 @@ Barrel {
 							);
 						});
 
-						plate.out = internalBuses.fxIn;
-						plate.build(levelGroup, 'addToTail');
-						server.sync;
 						plate;
 					};
 					[levelGroup, auxLevel]
@@ -302,6 +298,12 @@ Barrel {
 			};
 			[hoopGroup, auxHoop]
 		};
+
+		this.platesDo({ arg plate, h, q, l, p;
+			plate.out = internalBuses.fxIn;
+			plate.build(data[h][1][q][1][l][0], 'addToTail');
+			server.sync;
+		});
 	}
 
 	build { arg hoops, quadrants, levels, target, addAction = 'addToHead';

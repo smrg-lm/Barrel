@@ -6,7 +6,7 @@ Server.scsynth;
 Server.supernova;
 s.options.maxNodes = 1024;
 s.options.numControlBusChannels;
-s.options.numAudioBusChannels = 1024;
+s.options.numAudioBusChannels = 4096;
 s.options.memSize = 1024 * 500;
 s.reboot;
 )
@@ -53,18 +53,19 @@ w = Synth(\test, [out: b.sourceIn]);
 
 (
 // Ejecutar varias veces, valores aleatorios
+var hoop = b.hoops.rand;
 var quadrant = b.quadrants.rand;
 var level = b.levels.rand;
 
 // cambia al procesamiento (luego que sea solo una función)
-b.plate(0, quadrant, 0, 0).processDef = SynthDef(\custom, { arg in, out;
+b.plate(hoop, quadrant, 0, 0).processDef = SynthDef(\custom, { arg in, out;
 	var sig = In.ar(in, 4);
 	sig = Resonz.ar(sig, rrand(500, 2000), 0.01, mul: 100);
 	Out.ar(out, sig);
 });
 
 // cambia la decisión
-b.plate(0, quadrant, level, 0).decisionDef = SynthDef(\indeciso, { arg in, kout;
+b.plate(hoop, quadrant, level, 0).decisionDef = SynthDef(\indeciso, { arg in, kout;
 	var sig = In.ar(in); // hacer algo con esto...
 	var control;
 	control = LFNoise1.kr(1).range(0, 1);
